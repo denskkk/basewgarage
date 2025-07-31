@@ -311,8 +311,13 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
             // Создаем уведомление для исполнителя (независимо от его статуса онлайн)
             createNotification(assignedTo, 'Новая задача', `Вам назначена задача: ${title}`, 'task', taskId);
             
+            // Логируем для отладки
+            console.log(`📋 Создана задача "${title}"`);
+            console.log(`👤 Назначено: ${assignedTo}`);
+            console.log(`👤 Автор: ${req.user.userId}`);
+            console.log(`🔌 Подключенные пользователи:`, Array.from(connectedUsers.keys()));
+            
             // Отправляем уведомление через WebSocket ВСЕМ подключенным пользователям
-            // Не только тому, кому назначено
             io.emit('newTask', {
                 id: taskId,
                 title,
@@ -322,14 +327,26 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
             });
             
             // Также отправляем персональное уведомление исполнителю
-            io.to(assignedTo).emit('personalTask', {
+            const personalTaskData = {
                 id: taskId,
                 title,
                 description,
                 priority,
                 deadline,
                 assignedBy: req.user.userId
-            });
+            };
+            
+            console.log(`🎯 Отправляем personalTask для ${assignedTo}:`, personalTaskData);
+            io.to(assignedTo).emit('personalTask', personalTaskData);
+            
+            // Дополнительно проверяем, подключен ли пользователь
+            if (connectedUsers.has(assignedTo)) {
+                const socketId = connectedUsers.get(assignedTo);
+                console.log(`✅ Пользователь ${assignedTo} подключен с socket ${socketId}`);
+                io.to(socketId).emit('personalTask', personalTaskData);
+            } else {
+                console.log(`⚠️ Пользователь ${assignedTo} не подключен`);
+            }
             
             console.log(`✅ Задача "${title}" создана для ${assignedTo}`);
             
@@ -513,6 +530,16 @@ io.on('connection', (socket) => {
         console.log(`Пользователь ${userId} подключен с socket ${socket.id}`);
     });
     
+    socket.on('test', (data) => {
+        console.log('🧪 Получено тестовое сообщение:', data);
+        socket.emit('test_response', {
+            message: 'Тест прошел успешно!',
+            received: data,
+            timestamp: new Date().toISOString(),
+            socketId: socket.id
+        });
+    });
+    
     socket.on('disconnect', () => {
         // Удаляем пользователя из списка подключенных
         for (let [userId, socketId] of connectedUsers) {
@@ -611,6 +638,25 @@ app.get('/login', (req, res) => {
 // Страница диагностики системы
 app.get('/status', (req, res) => {
     res.sendFile(path.join(__dirname, '../status.html'));
+});
+
+// Страница тестирования WebSocket
+app.get('/websocket-test', (req, res) => {
+    res.sendFile(path.join(__dirname, '../websocket-test.html'));
+});
+
+// API для диагностики WebSocket
+app.get('/api/websocket-status', (req, res) => {
+    const connectedUsersArray = Array.from(connectedUsers.entries()).map(([userId, socketId]) => ({
+        userId,
+        socketId
+    }));
+    
+    res.json({
+        totalConnections: connectedUsers.size,
+        connectedUsers: connectedUsersArray,
+        serverTime: new Date().toISOString()
+    });
 });
 
 // Запуск сервера

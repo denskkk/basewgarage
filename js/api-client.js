@@ -34,7 +34,9 @@ class WGarageAPI {
         
         this.socket.on('connect', () => {
             console.log('✅ WebSocket подключен');
-            this.socket.emit('userConnect', user.id || user.username);
+            const userId = user.id || user.username;
+            console.log(`👤 Подключаем пользователя: ${userId}`, user);
+            this.socket.emit('userConnect', userId);
         });
 
         this.socket.on('disconnect', () => {
@@ -50,6 +52,7 @@ class WGarageAPI {
         // Персональная задача для конкретного пользователя
         this.socket.on('personalTask', (data) => {
             console.log('🎯 Получена персональная задача:', data);
+            console.log('👤 Текущий пользователь:', user);
             this.showNotification('Вам назначена задача!', `${data.title}`, 'success');
             this.updateTaskList();
             
@@ -72,6 +75,8 @@ class WGarageAPI {
                         }
                     }]
                 );
+            } else {
+                console.log('⚠️ realTimeNotifications не найден');
             }
         });
 

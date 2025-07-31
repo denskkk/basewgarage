@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Тест WebSocket - W Garage</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+        }
+        .status-ok {
+            background: #f0f9f4;
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+        .status-error {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+        .status-warning {
+            background: #fffbeb;
+            border-left-color: #f59e0b;
+            color: #92400e;
+        }
+        .log {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #2563eb;
+        }
+        .user-info {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔍 Тест WebSocket соединений</div>
+            <p>Диагностика системы уведомлений W Garage</p>
+        </div>
+
+        <div id="userInfo" class="user-info">
+            <strong>Загрузка информации о пользователе...</strong>
+        </div>
+
+        <div id="statusContainer">
+            <!-- Статус будет загружен через JavaScript -->
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testWebSocket()" class="btn">🔌 Тест WebSocket</button>
+            <button onclick="sendTestMessage()" class="btn">📨 Отправить тестовое сообщение</button>
+            <button onclick="checkConnectedUsers()" class="btn">👥 Проверить подключенных</button>
+            <button onclick="clearLog()" class="btn">🗑️ Очистить лог</button>
+        </div>
+
+        <div id="log" class="log">
+            <strong>Лог событий:</strong><br>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/dashboard" class="btn">📊 Вернуться к панели</a>
+        </div>
+    </div>
+
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        let socket = null;
+        let logElement = document.getElementById('log');
+
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${time}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        function checkUserInfo() {
+            const token = localStorage.getItem('wgarage-token');
+            const user = localStorage.getItem('wgarage-current-user');
+            const userInfoDiv = document.getElementById('userInfo');
+
+            if (!token) {
+                userInfoDiv.innerHTML = `
+                    <div class="status status-error">
+                        <strong>❌ Не авторизован</strong>
+                        <p><a href="/login">Перейти к входу</a></p>
+                    </div>
+                `;
+                return null;
+            }
+
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    userInfoDiv.innerHTML = `
+                        <div class="status status-ok">
+                            <strong>✅ Пользователь: ${userData.name || userData.username}</strong>
+                            <p>ID: ${userData.id || userData.username}</p>
+                            <p>Должность: ${userData.position || 'Не указана'}</p>
+                            <p>Токен: ${token.substring(0, 20)}...</p>
+                        </div>
+                    `;
+                    return userData;
+                } catch (e) {
+                    userInfoDiv.innerHTML = `
+                        <div class="status status-error">
+                            <strong>❌ Ошибка данных пользователя</strong>
+                        </div>
+                    `;
+                }
+            }
+            return null;
+        }
+
+        function testWebSocket() {
+            const user = checkUserInfo();
+            if (!user) {
+                log('❌ Нет данных пользователя для подключения');
+                return;
+            }
+
+            log('🔌 Подключение к WebSocket...');
+            
+            if (socket) {
+                socket.disconnect();
+            }
+
+            socket = io(window.location.origin);
+
+            socket.on('connect', () => {
+                log('✅ WebSocket подключен');
+                const userId = user.id || user.username;
+                log(`👤 Подключаем пользователя: ${userId}`);
+                socket.emit('userConnect', userId);
+            });
+
+            socket.on('disconnect', () => {
+                log('❌ WebSocket отключен');
+            });
+
+            socket.on('newTask', (data) => {
+                log(`📋 Получено newTask: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('personalTask', (data) => {
+                log(`🎯 Получено personalTask: ${JSON.stringify(data)}`);
+                alert(`🎯 Новая задача: ${data.title}`);
+            });
+
+            socket.on('taskUpdate', (data) => {
+                log(`📝 Получено taskUpdate: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('test_response', (data) => {
+                log(`🧪 Ответ на тест: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`❌ Ошибка подключения: ${error}`);
+            });
+        }
+
+        function sendTestMessage() {
+            if (!socket || !socket.connected) {
+                log('❌ WebSocket не подключен');
+                return;
+            }
+
+            const user = checkUserInfo();
+            if (!user) return;
+
+            // Отправляем тестовое сообщение серверу
+            socket.emit('test', {
+                from: user.id || user.username,
+                message: 'Тестовое сообщение',
+                timestamp: new Date().toISOString()
+            });
+
+            log('📨 Отправлено тестовое сообщение');
+        }
+
+        function checkConnectedUsers() {
+            log('👥 Проверяем подключенных пользователей...');
+            
+            fetch('/api/websocket-status')
+                .then(response => response.json())
+                .then(data => {
+                    log(`📊 Всего подключений: ${data.totalConnections}`);
+                    log(`⏰ Время сервера: ${data.serverTime}`);
+                    
+                    if (data.connectedUsers.length > 0) {
+                        log('👥 Подключенные пользователи:');
+                        data.connectedUsers.forEach(user => {
+                            log(`  - ${user.userId} (socket: ${user.socketId})`);
+                        });
+                    } else {
+                        log('🚫 Нет подключенных пользователей');
+                    }
+                })
+                .catch(error => {
+                    log(`❌ Ошибка получения статуса: ${error}`);
+                });
+        }
+
+        function clearLog() {
+            logElement.innerHTML = '<strong>Лог событий:</strong><br>';
+        }
+
+        // Автоматически проверяем пользователя при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            checkUserInfo();
+            log('🚀 Страница загружена, готов к тестированию');
+        });
+    </script>
+</body>
+</html>
