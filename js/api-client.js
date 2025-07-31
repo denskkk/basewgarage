@@ -491,8 +491,12 @@ window.TaskManager = {
     },
 
     // Получение доступных пользователей для назначения задач
-    async getAvailableAssignees() {
-        return await window.UserManager.getAvailableUsers();
+    getAvailableAssignees() {
+        const currentUser = window.UserManager.getCurrentUser();
+        if (!currentUser) return [];
+        
+        // Все пользователи могут назначать задачи друг другу
+        return Object.values(window.usersDatabase || {}).filter(user => user.id !== currentUser.id);
     }
 };
 

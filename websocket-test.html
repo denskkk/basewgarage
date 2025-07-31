@@ -257,6 +257,30 @@
                 });
         }
 
+        function checkConnectedUsers() {
+            log('👥 Проверяем подключенных пользователей...');
+            
+            fetch('/api/websocket-status')
+                .then(response => response.json())
+                .then(data => {
+                    log(`📊 Статус WebSocket сервера:`);
+                    log(`├─ Всего подключений: ${data.totalConnections}`);
+                    log(`├─ Время сервера: ${data.serverTime}`);
+                    log(`└─ Подключенные пользователи:`);
+                    
+                    if (data.connectedUsers.length === 0) {
+                        log('   (никого нет)');
+                    } else {
+                        data.connectedUsers.forEach(user => {
+                            log(`   ├─ ${user.userId} (socket: ${user.socketId})`);
+                        });
+                    }
+                })
+                .catch(error => {
+                    log(`❌ Ошибка получения статуса: ${error}`);
+                });
+        }
+
         function clearLog() {
             logElement.innerHTML = '<strong>Лог событий:</strong><br>';
         }
