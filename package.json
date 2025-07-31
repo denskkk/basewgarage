@@ -5,9 +5,10 @@
   "main": "server/server.js",
   "scripts": {
     "start": "cd server && npm start",
-    "build": "cd server && npm install",
+    "build": "cd server && npm install && npm run init-db",
     "dev": "cd server && npm run dev",
-    "init-db": "cd server && npm run init-db"
+    "init-db": "cd server && npm run init-db",
+    "install-server": "cd server && npm install"
   },
   "repository": {
     "type": "git",
