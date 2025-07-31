@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест выхода из системы</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .danger:hover {
+            background: #c82333;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Тест системы выхода</h1>
+        
+        <h3>Статус авторизации:</h3>
+        <div id="authStatus">Проверяем...</div>
+        
+        <h3>Текущий пользователь:</h3>
+        <div id="currentUser">Загружаем...</div>
+        
+        <h3>Тесты:</h3>
+        <button onclick="testLogout()">Тест выхода через Dashboard</button>
+        <button onclick="testDirectLogout()">Прямой выход через UserManager</button>
+        <button onclick="testClearData()">Очистить данные пользователя</button>
+        <button onclick="checkElements()" class="danger">Проверить элементы на странице</button>
+        
+        <h3>Лог операций:</h3>
+        <div class="log" id="logOutput"></div>
+        
+        <h3>Навигация:</h3>
+        <button onclick="window.location.href='login.html'">Перейти на страницу входа</button>
+        <button onclick="window.location.href='dashboard.html'">Перейти в панель управления</button>
+    </div>
+
+    <!-- Подключаем все необходимые скрипты -->
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/roleData.js"></script>
+    <script src="js/profile-navigation.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/dashboard.js"></script>
+
+    <script>
+        let logDiv = document.getElementById('logOutput');
+        
+        function log(message) {
+            console.log(message);
+            logDiv.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus() {
+            try {
+                // Проверяем UserManager
+                if (window.UserManager) {
+                    const isLoggedIn = window.UserManager.isLoggedIn();
+                    const currentUser = window.UserManager.getCurrentUser();
+                    
+                    document.getElementById('authStatus').textContent = isLoggedIn ? 'Авторизован' : 'Не авторизован';
+                    document.getElementById('currentUser').textContent = currentUser ? 
+                        `${currentUser.name} (${currentUser.role})` : 'Пользователь не найден';
+                    
+                    log(`Статус: ${isLoggedIn ? 'авторизован' : 'не авторизован'}`);
+                    if (currentUser) {
+                        log(`Пользователь: ${currentUser.name} (${currentUser.role})`);
+                    }
+                } else {
+                    log('❌ UserManager не найден');
+                }
+            } catch (error) {
+                log('❌ Ошибка при проверке статуса: ' + error.message);
+            }
+        }
+        
+        function testLogout() {
+            log('🔄 Начинаем тест выхода через Dashboard...');
+            try {
+                if (window.dashboard && typeof window.dashboard.logout === 'function') {
+                    log('✅ Dashboard найден, вызываем logout()');
+                    window.dashboard.logout();
+                } else if (window.logout && typeof window.logout === 'function') {
+                    log('✅ Глобальная функция logout найдена');
+                    window.logout();
+                } else {
+                    log('❌ Dashboard или функция logout не найдены');
+                }
+            } catch (error) {
+                log('❌ Ошибка при выходе через Dashboard: ' + error.message);
+            }
+        }
+        
+        function testDirectLogout() {
+            log('🔄 Начинаем прямой тест выхода...');
+            try {
+                if (window.UserManager && typeof window.UserManager.logout === 'function') {
+                    log('✅ UserManager найден, вызываем logout()');
+                    const result = window.UserManager.logout();
+                    log('✅ Результат выхода: ' + result);
+                    updateStatus();
+                } else {
+                    log('❌ UserManager или функция logout не найдены');
+                }
+            } catch (error) {
+                log('❌ Ошибка при прямом выходе: ' + error.message);
+            }
+        }
+        
+        function testClearData() {
+            log('🔄 Очищаем данные пользователя...');
+            try {
+                localStorage.removeItem('wgarage-current-user');
+                sessionStorage.removeItem('wgarage-current-user');
+                log('✅ Данные очищены из localStorage и sessionStorage');
+                updateStatus();
+            } catch (error) {
+                log('❌ Ошибка при очистке данных: ' + error.message);
+            }
+        }
+        
+        function checkElements() {
+            log('🔄 Проверяем элементы...');
+            
+            // Проверяем доступность объектов
+            log('UserManager: ' + (window.UserManager ? '✅ доступен' : '❌ недоступен'));
+            log('Dashboard: ' + (window.dashboard ? '✅ доступен' : '❌ недоступен'));
+            log('NotificationManager: ' + (window.NotificationManager ? '✅ доступен' : '❌ недоступен'));
+            
+            // Проверяем элементы DOM
+            const logoutLink = document.getElementById('logoutLink');
+            log('logoutLink element: ' + (logoutLink ? '✅ найден' : '❌ не найден'));
+            
+            if (logoutLink) {
+                log('logoutLink тип: ' + logoutLink.tagName);
+                log('logoutLink href: ' + logoutLink.href);
+            }
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            log('📄 Страница загружена');
+            setTimeout(() => {
+                updateStatus();
+                checkElements();
+            }, 1000);
+        });
+        
+        // Проверяем статус каждые 5 секунд
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>

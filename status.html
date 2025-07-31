@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка системы - W Garage</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .status-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+        }
+        .status-ok {
+            background: #f0f9f4;
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+        .status-error {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+        .status-warning {
+            background: #fffbeb;
+            border-left-color: #f59e0b;
+            color: #92400e;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2563eb;
+        }
+        .token-info {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔧 W Garage - Диагностика системы</div>
+            <p>Проверка состояния системы авторизации</p>
+        </div>
+
+        <div id="statusContainer">
+            <!-- Статус будет загружен через JavaScript -->
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/login" class="btn">🔑 Перейти к входу</a>
+            <a href="/dashboard" class="btn">📊 Личный кабинет</a>
+            <button onclick="clearData()" class="btn" style="background: #ef4444;">🗑️ Очистить данные</button>
+        </div>
+    </div>
+
+    <script>
+        function checkSystemStatus() {
+            const container = document.getElementById('statusContainer');
+            let html = '';
+
+            // Проверка токена
+            const token = localStorage.getItem('wgarage-token');
+            if (token) {
+                html += `
+                    <div class="status-item status-ok">
+                        <strong>✅ Токен авторизации найден</strong>
+                        <div class="token-info">Токен: ${token.substring(0, 50)}...</div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="status-item status-error">
+                        <strong>❌ Токен авторизации отсутствует</strong>
+                        <p>Необходимо войти в систему</p>
+                    </div>
+                `;
+            }
+
+            // Проверка пользователя
+            const user = localStorage.getItem('wgarage-current-user');
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    html += `
+                        <div class="status-item status-ok">
+                            <strong>✅ Данные пользователя найдены</strong>
+                            <p>Пользователь: ${userData.name || userData.username || 'Неизвестно'}</p>
+                            <p>Роль: ${userData.position || userData.role || 'Неизвестно'}</p>
+                        </div>
+                    `;
+                } catch (e) {
+                    html += `
+                        <div class="status-item status-warning">
+                            <strong>⚠️ Данные пользователя повреждены</strong>
+                            <p>Необходимо перелогиниться</p>
+                        </div>
+                    `;
+                }
+            } else {
+                html += `
+                    <div class="status-item status-error">
+                        <strong>❌ Данные пользователя отсутствуют</strong>
+                        <p>Необходимо войти в систему</p>
+                    </div>
+                `;
+            }
+
+            // Проверка сервера
+            html += `
+                <div class="status-item status-warning">
+                    <strong>⚠️ Статус сервера</strong>
+                    <p>Проверяем подключение к серверу...</p>
+                    <div id="serverStatus">Загрузка...</div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Проверяем сервер
+            checkServerStatus();
+        }
+
+        async function checkServerStatus() {
+            const serverStatusDiv = document.getElementById('serverStatus');
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('wgarage-token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    serverStatusDiv.innerHTML = '<span style="color: green;">✅ Сервер работает, авторизация действительна</span>';
+                } else if (response.status === 401) {
+                    serverStatusDiv.innerHTML = '<span style="color: orange;">⚠️ Сервер работает, но токен недействителен</span>';
+                } else {
+                    serverStatusDiv.innerHTML = '<span style="color: red;">❌ Сервер работает, но есть проблемы</span>';
+                }
+            } catch (error) {
+                serverStatusDiv.innerHTML = '<span style="color: red;">❌ Сервер недоступен или не запущен</span>';
+            }
+        }
+
+        function clearData() {
+            if (confirm('Очистить все данные авторизации?')) {
+                localStorage.removeItem('wgarage-token');
+                localStorage.removeItem('wgarage-current-user');
+                localStorage.removeItem('wgarage-remember-user');
+                alert('Данные очищены');
+                location.reload();
+            }
+        }
+
+        // Запускаем проверку при загрузке
+        document.addEventListener('DOMContentLoaded', checkSystemStatus);
+    </script>
+</body>
+</html>

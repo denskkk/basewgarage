@@ -1,0 +1,30 @@
+{
+  "name": "wgarage-system",
+  "version": "1.0.0",
+  "description": "W Garage - многопользовательская система управления автосервисом",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "build": "cd server && npm install",
+    "dev": "cd server && npm run dev",
+    "init-db": "cd server && npm run init-db"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_USERNAME/wgarage.git"
+  },
+  "keywords": [
+    "garage",
+    "management",
+    "nodejs",
+    "express",
+    "sqlite",
+    "websocket"
+  ],
+  "author": "W Garage Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

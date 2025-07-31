@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Расписание работы - W Garage</title>
+    
+    <!-- Немедленная проверка авторизации -->
+    <script>
+        // Проверяем токен до загрузки страницы
+        (function() {
+            const token = localStorage.getItem('wgarage-token');
+            if (!token) {
+                // Перенаправляем на логин если токена нет
+                window.location.replace('/login');
+                return;
+            }
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #06b6d4;
+            --work-day: #10b981;
+            --weekend: #ef4444;
+            --today: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #1f2937;
+            margin: 0;
+            background: linear-gradient(45deg, var(--primary-color), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .month-info {
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .month-info h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-success { background: var(--success-color); color: white; }
+        .btn-info { background: var(--info-color); color: white; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .schedule-table {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            position: relative;
+        }
+
+        th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .employee-name {
+            background: #f8fafc;
+            font-weight: 600;
+            text-align: left;
+            padding-left: 1rem;
+            white-space: nowrap;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+
+        .department-header {
+            background: var(--info-color);
+            color: white;
+            font-weight: bold;
+            text-align: left;
+            padding-left: 1rem;
+        }
+
+        .work-day {
+            background: var(--work-day);
+            color: white;
+            font-weight: bold;
+        }
+
+        .weekend {
+            background: var(--weekend);
+            color: white;
+            font-weight: bold;
+        }
+
+        .today {
+            background: var(--today);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5);
+        }
+
+        .total-days {
+            background: #f3f4f6;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .day-header {
+            font-size: 0.75rem;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-width: 30px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .employee-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .employee-position {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: normal;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0.5rem;
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            th, td {
+                padding: 0.25rem;
+            }
+
+            .controls {
+                justify-content: center;
+            }
+
+            .legend {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-calendar-alt"></i> Расписание работы W Garage</h1>
+        </div>
+
+        <div class="month-info">
+            <h2><i class="fas fa-calendar"></i> Июль 2025</h2>
+            <p>Рабочий график всех сотрудников</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="loadSchedule()">
+                <i class="fas fa-refresh"></i> Обновить расписание
+            </button>
+            <button class="btn btn-success" onclick="showTodaySchedule()">
+                <i class="fas fa-today"></i> Кто работает сегодня
+            </button>
+            <button class="btn btn-info" onclick="exportSchedule()">
+                <i class="fas fa-download"></i> Экспорт
+            </button>
+            <button class="btn btn-primary" onclick="openDashboard()">
+                <i class="fas fa-tachometer-alt"></i> Панель управления
+            </button>
+        </div>
+
+        <div class="stats-grid" id="statsContainer">
+            <!-- Статистика будет загружена здесь -->
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--work-day);"></div>
+                <span>Рабочий день (1)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--weekend);"></div>
+                <span>Выходной (В)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--today);"></div>
+                <span>Сегодня</span>
+            </div>
+        </div>
+
+        <div class="schedule-table">
+            <table id="scheduleTable">
+                <!-- Таблица расписания будет загружена здесь -->
+            </table>
+        </div>
+
+        <div id="todayInfo" style="display: none;">
+            <!-- Информация о сегодняшнем дне -->
+        </div>
+    </div>
+
+    <!-- Socket.IO для реального времени -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- API клиент -->
+    <script src="js/api-client.js"></script>
+    
+    <!-- Инициализация и проверка авторизации -->
+    <script>
+        // Инициализируем API клиент
+        window.wgarageAPI = new WGarageAPI();
+        
+        // Проверяем авторизацию
+        const token = localStorage.getItem('wgarage-token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+    </script>
+    
+    <!-- Уведомления в реальном времени -->
+    <script src="js/real-time-notifications.js"></script>
+    
+    <script src="js/auth.js"></script>
+    <script src="js/schedule.js"></script>
+    <script>
+        // Получение текущего дня
+        function getCurrentDay() {
+            return new Date().getDate();
+        }
+
+        // Загрузка расписания
+        function loadSchedule() {
+            if (!window.ScheduleManager) {
+                alert('ScheduleManager не загружен');
+                return;
+            }
+
+            const scheduleData = window.ScheduleManager.scheduleData;
+            const currentDay = getCurrentDay();
+            
+            // Загружаем статистику
+            loadStats();
+            
+            // Создаем таблицу
+            const table = document.getElementById('scheduleTable');
+            table.innerHTML = '';
+
+            // Заголовок таблицы
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                <th style="position: sticky; left: 0; z-index: 15;">Сотрудник</th>
+                ${Array.from({length: 31}, (_, i) => {
+                    const day = i + 1;
+                    const dayOfWeek = new Date(2025, 6, day).toLocaleDateString('ru-RU', {weekday: 'short'});
+                    return `<th class="day-header">${day}<br>${dayOfWeek}</th>`;
+                }).join('')}
+                <th>Всего дней</th>
+            `;
+            table.appendChild(headerRow);
+
+            // Группируем сотрудников по отделам
+            const departments = {};
+            Object.entries(scheduleData.employees).forEach(([userId, employee]) => {
+                if (!departments[employee.department]) {
+                    departments[employee.department] = [];
+                }
+                departments[employee.department].push({userId, ...employee});
+            });
+
+            // Создаем строки для каждого отдела
+            Object.entries(departments).forEach(([department, employees]) => {
+                // Заголовок отдела
+                const deptRow = document.createElement('tr');
+                deptRow.innerHTML = `
+                    <td class="department-header" colspan="33">
+                        <i class="fas fa-users"></i> ${department} (${employees.length} сотрудников)
+                    </td>
+                `;
+                table.appendChild(deptRow);
+
+                // Сотрудники отдела
+                employees.forEach(employee => {
+                    const row = document.createElement('tr');
+                    
+                    // Информация о сотруднике
+                    const employeeCell = `
+                        <td class="employee-name">
+                            <div class="employee-info">
+                                <strong>${employee.name}</strong>
+                                <span class="employee-position">${employee.position}</span>
+                            </div>
+                        </td>
+                    `;
+
+                    // Дни месяца
+                    const scheduleCells = employee.schedule.map((dayStatus, index) => {
+                        const day = index + 1;
+                        const isToday = day === currentDay;
+                        const isWorkDay = dayStatus === 1;
+                        
+                        let cellClass = isWorkDay ? 'work-day' : 'weekend';
+                        if (isToday) cellClass += ' today';
+                        
+                        const cellContent = isWorkDay ? '1' : 'В';
+                        
+                        return `<td class="${cellClass}">${cellContent}</td>`;
+                    }).join('');
+
+                    // Общее количество рабочих дней
+                    const totalDaysCell = `<td class="total-days">${employee.workDays}</td>`;
+
+                    row.innerHTML = employeeCell + scheduleCells + totalDaysCell;
+                    table.appendChild(row);
+                });
+            });
+
+            console.log('Расписание загружено');
+        }
+
+        // Загрузка статистики
+        function loadStats() {
+            const stats = window.ScheduleManager.getDepartmentStats();
+            const totalEmployees = Object.values(window.ScheduleManager.scheduleData.employees).length;
+            const totalWorkDays = Object.values(window.ScheduleManager.scheduleData.employees)
+                .reduce((sum, emp) => sum + emp.workDays, 0);
+            const avgWorkDays = Math.round(totalWorkDays / totalEmployees);
+
+            const workingToday = window.ScheduleManager.getTodaySchedule().length;
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalEmployees}</div>
+                    <div class="stat-label">Всего сотрудников</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${workingToday}</div>
+                    <div class="stat-label">Работают сегодня</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${avgWorkDays}</div>
+                    <div class="stat-label">Средние рабочие дни</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${Object.keys(stats).length}</div>
+                    <div class="stat-label">Отделов</div>
+                </div>
+            `;
+
+            document.getElementById('statsContainer').innerHTML = statsHtml;
+        }
+
+        // Показать кто работает сегодня
+        function showTodaySchedule() {
+            const workingToday = window.ScheduleManager.getTodaySchedule();
+            const today = new Date().toLocaleDateString('ru-RU', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            let html = `
+                <div class="month-info">
+                    <h3><i class="fas fa-users"></i> Работают сегодня (${today})</h3>
+                    <p>Всего: ${workingToday.length} сотрудников</p>
+                </div>
+                <div class="stats-grid">
+            `;
+
+            workingToday.forEach(employee => {
+                html += `
+                    <div class="stat-card">
+                        <strong>${employee.name}</strong>
+                        <div class="stat-label">${employee.position}</div>
+                        <div class="stat-label">${employee.department}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            document.getElementById('todayInfo').innerHTML = html;
+            document.getElementById('todayInfo').style.display = 'block';
+
+            // Прокрутка к информации
+            document.getElementById('todayInfo').scrollIntoView({behavior: 'smooth'});
+        }
+
+        // Экспорт расписания
+        function exportSchedule() {
+            const data = window.ScheduleManager.exportSchedule();
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wgarage-schedule-july-2025.json`;
+            a.click();
+
+            alert('📁 Расписание экспортировано в файл');
+        }
+
+        // Открыть панель управления
+        function openDashboard() {
+            window.open('dashboard.html', '_blank');
+        }
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Страница расписания загружена');
+            
+            // Проверяем доступность ScheduleManager
+            if (window.ScheduleManager) {
+                console.log('ScheduleManager доступен');
+                loadSchedule();
+            } else {
+                console.error('ScheduleManager не найден');
+                setTimeout(() => {
+                    if (window.ScheduleManager) {
+                        loadSchedule();
+                    } else {
+                        alert('Ошибка: Система расписания не загружена');
+                    }
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

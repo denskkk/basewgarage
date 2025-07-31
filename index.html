@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W Garage - Дизель-сервис</title>
+    
+    <!-- Немедленная проверка авторизации -->
+    <script>
+        // Проверяем токен до загрузки страницы
+        (function() {
+            const token = localStorage.getItem('wgarage-token');
+            if (!token) {
+                // Перенаправляем на логин если токена нет
+                window.location.replace('/login');
+                return;
+            }
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>ml>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>База знаний W Garage - Дизель Сервис</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Боковая панель -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-wrench"></i>
+                    <span>W Garage</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Поиск по базе знаний...">
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Руководство</h3>
+                    <ul>
+                        <li><a href="#" data-role="kom-director"><i class="fas fa-crown"></i> Коммерческий директор</a></li>
+                        <li><a href="#" data-role="fin-director"><i class="fas fa-chart-line"></i> Финансовый директор</a></li>
+                        <li><a href="#" data-role="zam-director"><i class="fas fa-user-tie"></i> Заместитель директора</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Управление</h3>
+                    <ul>
+                        <li><a href="#" data-role="rop"><i class="fas fa-tasks"></i> РОП</a></li>
+                        <li><a href="#" data-role="glavbuh"><i class="fas fa-calculator"></i> Главный бухгалтер</a></li>
+                        <li><a href="#" data-role="manager"><i class="fas fa-handshake"></i> Менеджер</a></li>
+                        <li><a href="#" data-role="lead-manager"><i class="fas fa-users"></i> Лид менеджер</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Техническая служба</h3>
+                    <ul>
+                        <li><a href="#" data-role="toplivshik"><i class="fas fa-gas-pump"></i> Топливщик</a></li>
+                        <li><a href="#" data-role="slesar"><i class="fas fa-tools"></i> Слесарь</a></li>
+                        <li><a href="#" data-role="forsunshik"><i class="fas fa-spray-can"></i> Форсунщик</a></li>
+                        <li><a href="#" data-role="elektrik"><i class="fas fa-bolt"></i> Электрик</a></li>
+                        <li><a href="#" data-role="diagnosty"><i class="fas fa-search-plus"></i> Диагност</a></li>
+                        <li><a href="#" data-role="turbo-slesar"><i class="fas fa-fan"></i> Турбо слесарь</a></li>
+                        <li><a href="#" data-role="mehanik"><i class="fas fa-cog"></i> Механик</a></li>
+                        <li><a href="#" data-role="elektronshik"><i class="fas fa-microchip"></i> Электронщик</a></li>
+                        <li><a href="#" data-role="tokar"><i class="fas fa-industry"></i> Токарь</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Обслуживание</h3>
+                    <ul>
+                        <li><a href="#" data-role="operator"><i class="fas fa-headset"></i> Оператор</a></li>
+                        <li><a href="#" data-role="priemshik"><i class="fas fa-clipboard-check"></i> Приемщик</a></li>
+                        <li><a href="#" data-role="kassir"><i class="fas fa-cash-register"></i> Кассир</a></li>
+                        <li><a href="#" data-role="kladovshik"><i class="fas fa-warehouse"></i> Кладовщик</a></li>
+                        <li><a href="#" data-role="snabzhenec"><i class="fas fa-truck"></i> Снабженец запчастей</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Поддержка</h3>
+                    <ul>
+                        <li><a href="#" data-role="smm"><i class="fas fa-share-alt"></i> SMM Контент менеджмент</a></li>
+                        <li><a href="#" data-role="buhgalter"><i class="fas fa-file-invoice"></i> Бухгалтер</a></li>
+                        <li><a href="#" data-role="recruiter"><i class="fas fa-user-plus"></i> Рекрутер ассистент</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Основной контент -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="breadcrumb">
+                    <span id="currentRole">База знаний W Garage</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-icon" id="profileBtn" title="Мой профиль" style="display: none;">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <button class="btn-icon" id="backToDashboard" title="Вернуться в личный кабинет" style="display: none;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <button class="btn-icon" id="themeToggle" title="Переключить тему">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="btn-icon" title="Уведомления">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <!-- Стартовая страница -->
+                <div class="welcome-section">
+                    <div class="welcome-header">
+                        <h1>Добро пожаловать в базу знаний W Garage</h1>
+                        <p>Профессиональный дизель-сервис по ремонту топливной аппаратуры</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>24</h3>
+                                <p>Должности</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>150+</h3>
+                                <p>Инструкций</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>3</h3>
+                                <p>Основных направления</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>24/7</h3>
+                                <p>Доступ к базе</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-overview">
+                        <h2>Наши специализации</h2>
+                        <div class="services-grid">
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-spray-can"></i>
+                                </div>
+                                <h3>Ремонт форсунок</h3>
+                                <p>Диагностика, чистка, калибровка и восстановление дизельных форсунок всех типов</p>
+                            </div>
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-fan"></i>
+                                </div>
+                                <h3>Ремонт турбин</h3>
+                                <p>Полный цикл ремонта турбокомпрессоров: балансировка, замена картриджей</p>
+                            </div>
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-gas-pump"></i>
+                                </div>
+                                <h3>Ремонт ТНВД</h3>
+                                <p>Восстановление топливных насосов высокого давления любой сложности</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-access">
+                        <h2>Быстрый доступ</h2>
+                        <div class="quick-links">
+                            <a href="#" class="quick-link" data-role="diagnosty">
+                                <i class="fas fa-search-plus"></i>
+                                <span>Диагностика</span>
+                            </a>
+                            <a href="#" class="quick-link" data-role="toplivshik">
+                                <i class="fas fa-gas-pump"></i>
+                                <span>Топливная система</span>
+                            </a>
+                            <a href="#" class="quick-link" data-role="forsunshik">
+                                <i class="fas fa-spray-can"></i>
+                                <span>Форсунки</span>
+                            </a>
+                            <a href="#" class="quick-link" data-role="turbo-slesar">
+                                <i class="fas fa-fan"></i>
+                                <span>Турбины</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profile-navigation.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/real-time-notifications.js"></script>
+    
+    <!-- Инициализация и проверка авторизации -->
+    <script>
+        // Инициализируем API клиент
+        window.wgarageAPI = new WGarageAPI();
+        
+        // Проверяем авторизацию
+        const token = localStorage.getItem('wgarage-token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+    </script>
+    
+    <script src="js/app.js"></script>
+    <script src="js/roleData.js"></script>
+</body>
+</html>

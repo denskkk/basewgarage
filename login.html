@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему - W Garage</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-large">
+                    <i class="fas fa-wrench"></i>
+                    <span>W Garage</span>
+                </div>
+                <h1>Вход в систему</h1>
+                <p>Дизель-сервис по ремонту топливной аппаратуры</p>
+            </div>
+            
+            <form class="auth-form" id="loginForm">
+                <div class="form-group">
+                    <label for="username">Логин</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" name="username" placeholder="Введите ваш логин" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Введите ваш пароль" required>
+                        <button type="button" class="password-toggle" id="passwordToggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-options">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        Запомнить меня
+                    </label>
+                </div>
+                
+                <button type="submit" class="auth-btn" id="loginBtn">
+                    <span>Войти в систему</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                
+                <div class="error-message" id="errorMessage" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span></span>
+                </div>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Проблемы с входом? Обратитесь к администратору</p>
+                <div class="help-contacts">
+                    <a href="tel:+380123456789">
+                        <i class="fas fa-phone"></i>
+                        +38 (012) 345-67-89
+                    </a>
+                    <a href="mailto:admin@wgarage.com">
+                        <i class="fas fa-envelope"></i>
+                        admin@wgarage.com
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="auth-background">
+            <div class="bg-decoration bg-decoration-1"></div>
+            <div class="bg-decoration bg-decoration-2"></div>
+            <div class="bg-decoration bg-decoration-3"></div>
+        </div>
+    </div>
+    
+    <!-- Демо данные для тестирования -->
+    <div class="demo-info" id="demoInfo">
+        <div class="demo-header">
+            <h3>Демо доступы для тестирования</h3>
+            <button class="demo-close" id="demoClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="demo-accounts">
+            <div class="demo-account">
+                <h4>Руководитель (полный доступ)</h4>
+                <p><strong>Логин:</strong> valerijj.kd</p>
+                <p><strong>Пароль:</strong> wgarage2025!</p>
+                <button class="demo-login-btn" data-login="valerijj.kd" data-password="wgarage2025!">
+                    Войти как директор
+                </button>
+            </div>
+            <div class="demo-account">
+                <h4>Менеджер (личный кабинет)</h4>
+                <p><strong>Логин:</strong> viktor.m</p>
+                <p><strong>Пароль:</strong> wgarage2025!</p>
+                <button class="demo-login-btn" data-login="viktor.m" data-password="wgarage2025!">
+                    Войти как менеджер
+                </button>
+            </div>
+            <div class="demo-account">
+                <h4>Топливщик (личный кабинет)</h4>
+                <p><strong>Логин:</strong> anatolij.t</p>
+                <p><strong>Пароль:</strong> wgarage2025!</p>
+                <button class="demo-login-btn" data-login="anatolij.t" data-password="wgarage2025!">
+                    Войти как топливщик
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Socket.IO для реального времени -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- API клиент -->
+    <script src="js/api-client.js"></script>
+    
+    <!-- Инициализация API клиента -->
+    <script>
+        // Инициализируем API клиент
+        window.wgarageAPI = new WGarageAPI();
+    </script>
+    
+    <!-- Остальные скрипты -->
+    <script src="js/auth.js"></script>
+    <script src="js/auth-ui.js"></script>
+</body>
+</html>

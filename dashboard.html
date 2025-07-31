@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - W Garage</title>
+    
+    <!-- Немедленная проверка авторизации -->
+    <script>
+        // Проверяем токен до загрузки страницы
+        (function() {
+            const token = localStorage.getItem('wgarage-token');
+            if (!token) {
+                // Перенаправляем на логин если токена нет
+                window.location.replace('/login');
+                return;
+            }
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Верхняя панель -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-wrench"></i>
+                    <span>W Garage</span>
+                </div>
+                <div class="breadcrumb">
+                    <span id="currentPage">Личный кабинет</span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-menu">
+                    <div class="user-avatar" id="userAvatar">
+                        <img src="" alt="User Avatar" id="avatarImg">
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name" id="userName">Имя пользователя</span>
+                        <span class="user-position" id="userPosition">Должность</span>
+                    </div>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="#" id="profileLink">
+                            <i class="fas fa-user"></i>
+                            Мой профиль
+                        </a>
+                        <a href="index.html" id="knowledgeBaseLink">
+                            <i class="fas fa-book"></i>
+                            База знаний
+                        </a>
+                        <hr>
+                        <a href="#" id="settingsLink">
+                            <i class="fas fa-cog"></i>
+                            Настройки
+                        </a>
+                        <a href="#" id="changePasswordLink">
+                            <i class="fas fa-key"></i>
+                            Сменить пароль
+                        </a>
+                        <hr>
+                        <a href="#" id="logoutLink">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Выйти
+                        </a>
+                    </div>
+                </div>
+                
+                <button class="btn-icon" id="themeToggle" title="Переключить тему">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <button class="btn-icon" id="notificationsBtn" title="Уведомления">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationCount">0</span>
+                </button>
+                
+                <!-- Временная кнопка выхода для тестирования -->
+                <button class="btn-icon" id="testLogoutBtn" title="Выйти (тест)" style="background: #dc3545; color: white;">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Основное содержимое -->
+        <main class="dashboard-main">
+            <!-- Боковая панель навигации -->
+            <nav class="dashboard-sidebar" id="dashboardSidebar">
+                <div class="sidebar-section">
+                    <h3>Навигация</h3>
+                    <ul>
+                        <li>
+                            <a href="#" class="nav-link active" data-page="overview">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>Обзор</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="my-profile">
+                                <i class="fas fa-user"></i>
+                                <span>Мой профиль</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="knowledge-base">
+                                <i class="fas fa-book"></i>
+                                <span>База знаний</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="orgchart">
+                                <i class="fas fa-sitemap"></i>
+                                <span>Оргструктура</span>
+                            </a>
+                        </li>
+                        <li id="employeeListNav" style="display: none;">
+                            <a href="#" class="nav-link" data-page="employees">
+                                <i class="fas fa-users"></i>
+                                <span>Сотрудники</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Инструменты</h3>
+                    <ul>
+                        <li>
+                            <a href="#" class="nav-link" data-page="schedule">
+                                <i class="fas fa-calendar"></i>
+                                <span>Расписание</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="tasks">
+                                <i class="fas fa-tasks"></i>
+                                <span>Задачи</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="reports">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Отчеты</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Область контента -->
+            <div class="dashboard-content" id="dashboardContent">
+                <!-- Контент будет загружаться динамически -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Изменить пароль</h3>
+                <button class="modal-close" id="closePasswordModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="changePasswordForm">
+                <div class="form-group">
+                    <label for="currentPassword">Текущий пароль</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Новый пароль</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Подтвердите пароль</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelPasswordChange">
+                        Отмена
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        Изменить пароль
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Socket.IO для реального времени -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- API клиент -->
+    <script src="js/api-client.js"></script>
+    
+    <!-- Инициализация и проверка авторизации -->
+    <script>
+        // Инициализируем API клиент
+        window.wgarageAPI = new WGarageAPI();
+        
+        // Проверяем авторизацию
+        const token = localStorage.getItem('wgarage-token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+    </script>
+    
+    <!-- Уведомления в реальном времени -->
+    <script src="js/real-time-notifications.js"></script>
+    
+    <!-- Остальные скрипты -->
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/roleData.js"></script>
+    <script src="js/profile-navigation.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
