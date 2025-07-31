@@ -253,6 +253,9 @@
         if (!token) {
             window.location.href = '/login';
         }
+        
+        // Инициализируем менеджер уведомлений
+        window.realTimeNotifications = new RealTimeNotificationManager();
     </script>
     
     <script src="js/app.js"></script>

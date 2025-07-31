@@ -981,6 +981,44 @@ body {
     max-height: 80vh;
     overflow-y: auto;
     animation: modalSlideIn 0.3s ease-out;
+    color: var(--text-primary); /* Добавляем цвет текста */
+}
+
+/* Принудительно устанавливаем черный цвет для всех элементов в модальных окнах */
+.modal-content,
+.modal-content *,
+.modal-header,
+.modal-header *,
+.modal-body,
+.modal-body *,
+.modal-form,
+.modal-form *,
+.confirm-dialog,
+.confirm-dialog *,
+.notification-modal,
+.notification-modal * {
+    color: #000000 !important; /* Черный цвет для всех элементов */
+}
+
+/* Исключения для кнопок и иконок */
+.btn,
+.btn *,
+.modal-close,
+.modal-close * {
+    color: inherit !important; /* Кнопки сохраняют свой цвет */
+}
+
+/* Специально для кнопок подтверждения */
+.btn-primary {
+    color: #ffffff !important;
+}
+
+.btn-secondary {
+    color: #64748b !important;
+}
+
+.btn-danger {
+    color: #ffffff !important;
 }
 
 @keyframes modalSlideIn {

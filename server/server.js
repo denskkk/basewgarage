@@ -308,15 +308,30 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
                 return res.status(500).json({ error: 'Ошибка создания задачи' });
             }
             
-            // Создаем уведомление для исполнителя
+            // Создаем уведомление для исполнителя (независимо от его статуса онлайн)
             createNotification(assignedTo, 'Новая задача', `Вам назначена задача: ${title}`, 'task', taskId);
             
-            // Отправляем уведомление через WebSocket
-            io.to(assignedTo).emit('newTask', {
+            // Отправляем уведомление через WebSocket ВСЕМ подключенным пользователям
+            // Не только тому, кому назначено
+            io.emit('newTask', {
                 id: taskId,
                 title,
+                assignedTo,
+                assignedBy: req.user.userId,
+                deadline
+            });
+            
+            // Также отправляем персональное уведомление исполнителю
+            io.to(assignedTo).emit('personalTask', {
+                id: taskId,
+                title,
+                description,
+                priority,
+                deadline,
                 assignedBy: req.user.userId
             });
+            
+            console.log(`✅ Задача "${title}" создана для ${assignedTo}`);
             
             logActivity(req.user.userId, 'task_create', `Создана задача: ${title}`, req.ip, req.get('User-Agent'));
             

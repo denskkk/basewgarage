@@ -16,10 +16,23 @@ class RealTimeNotificationManager {
         this.loadNotifications();
         this.updateBadge();
         
-        // Подключаемся к WebSocket если авторизованы
-        if (window.WGarageAPI && window.UserManager.isLoggedIn()) {
-            this.socket = window.WGarageAPI.socket;
+        // Подключаемся к WebSocket если API клиент уже инициализирован
+        this.connectToSocket();
+        
+        // Проверяем подключение каждые 2 секунды если не подключены
+        this.connectionInterval = setInterval(() => {
+            if (!this.socket) {
+                this.connectToSocket();
+            }
+        }, 2000);
+    }
+    
+    connectToSocket() {
+        // Используем сокет из API клиента
+        if (window.wgarageAPI && window.wgarageAPI.socket) {
+            this.socket = window.wgarageAPI.socket;
             this.setupSocketListeners();
+            clearInterval(this.connectionInterval);
         }
     }
 
@@ -42,10 +55,10 @@ class RealTimeNotificationManager {
             }
 
             .notification-item {
-                background: var(--surface);
-                border: 1px solid var(--border-color);
-                border-radius: var(--border-radius-lg);
-                box-shadow: var(--shadow-lg);
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
                 padding: 1rem;
                 margin-bottom: 0.5rem;
                 min-width: 300px;
@@ -54,6 +67,11 @@ class RealTimeNotificationManager {
                 transform: translateX(100%);
                 transition: all 0.3s ease;
                 opacity: 0;
+                color: #000000 !important; /* Черный цвет текста */
+            }
+
+            .notification-item * {
+                color: #000000 !important; /* Все элементы внутри черным цветом */
             }
 
             .notification-item.show {
@@ -75,14 +93,14 @@ class RealTimeNotificationManager {
 
             .notification-title {
                 font-weight: 600;
-                color: var(--text-primary);
+                color: #000000 !important;
                 font-size: 0.9rem;
             }
 
             .notification-close {
                 background: none;
                 border: none;
-                color: var(--text-muted);
+                color: #64748b !important;
                 cursor: pointer;
                 padding: 0.25rem;
                 border-radius: 50%;
@@ -275,17 +293,23 @@ class RealTimeNotificationManager {
     setupSocketListeners() {
         if (!this.socket) return;
 
-        // Новая задача
+        // Новая задача (общее уведомление)
         this.socket.on('newTask', (data) => {
-            this.showToast('Новая задача', `Вам назначена задача: ${data.title}`, 'info', [
+            console.log('📋 Уведомление о создании задачи:', data);
+        });
+
+        // Персональная задача (для конкретного пользователя)
+        this.socket.on('personalTask', (data) => {
+            console.log('🎯 Персональная задача получена:', data);
+            this.showToast('🎯 Вам назначена новая задача!', `${data.title}`, 'success', [
                 {
                     text: 'Просмотреть',
                     action: () => this.openTask(data.id)
                 }
             ]);
             this.addNotification({
-                title: 'Новая задача',
-                message: `Вам назначена задача: ${data.title}`,
+                title: 'Новая задача назначена',
+                message: `${data.title}${data.deadline ? ` (Дедлайн: ${new Date(data.deadline).toLocaleDateString()})` : ''}`,
                 type: 'task',
                 relatedId: data.id,
                 isRead: false

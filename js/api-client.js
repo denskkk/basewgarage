@@ -26,16 +26,15 @@ class WGarageAPI {
     initSocket() {
         if (this.socket) return;
         
+        // Создаем подключение только если пользователь авторизован
+        const user = this.getCurrentUser();
+        if (!user) return;
+        
         this.socket = io(window.location.origin);
         
         this.socket.on('connect', () => {
             console.log('✅ WebSocket подключен');
-            if (this.token) {
-                const user = this.getCurrentUser();
-                if (user) {
-                    this.socket.emit('userConnect', user.id);
-                }
-            }
+            this.socket.emit('userConnect', user.id || user.username);
         });
 
         this.socket.on('disconnect', () => {
@@ -44,8 +43,45 @@ class WGarageAPI {
 
         // Обработчики событий
         this.socket.on('newTask', (data) => {
-            this.showNotification('Новая задача', `Вам назначена задача: ${data.title}`, 'info');
+            console.log('📋 Получено уведомление о новой задаче:', data);
+            this.showNotification('Новая задача', `Создана задача: ${data.title}`, 'info');
+        });
+
+        // Персональная задача для конкретного пользователя
+        this.socket.on('personalTask', (data) => {
+            console.log('🎯 Получена персональная задача:', data);
+            this.showNotification('Вам назначена задача!', `${data.title}`, 'success');
             this.updateTaskList();
+            
+            // Показываем всплывающее уведомление
+            if (window.realTimeNotifications) {
+                window.realTimeNotifications.showToast(
+                    '🎯 Новая задача назначена вам!', 
+                    `${data.title}${data.deadline ? ` (Дедлайн: ${new Date(data.deadline).toLocaleDateString()})` : ''}`, 
+                    'success',
+                    [{
+                        text: 'Просмотреть задачи',
+                        action: () => {
+                            if (window.location.pathname !== '/dashboard') {
+                                window.location.href = '/dashboard';
+                            } else {
+                                // Переключаемся на вкладку задач если уже на дашборде
+                                const tasksTab = document.querySelector('[data-page="tasks"]');
+                                if (tasksTab) tasksTab.click();
+                            }
+                        }
+                    }]
+                );
+            }
+        });
+
+        this.socket.on('taskUpdate', (data) => {
+            this.showNotification('Обновление задачи', `Статус задачи "${data.title}" изменен`, 'info');
+            this.updateTaskList();
+        });
+
+        this.socket.on('newComment', (data) => {
+            this.showNotification('Новый комментарий', `Новый комментарий к задаче "${data.title}"`, 'info');
         });
 
         this.socket.on('taskUpdate', (data) => {
@@ -147,7 +183,8 @@ class WGarageAPI {
                 localStorage.setItem('wgarage-token', this.token);
                 localStorage.setItem('wgarage-current-user', JSON.stringify(response.user));
                 
-                // Подключаем к WebSocket
+                // Подключаем к WebSocket ПОСЛЕ успешной авторизации
+                this.initSocket();
                 if (this.socket) {
                     this.socket.emit('userConnect', response.user.id);
                 }
