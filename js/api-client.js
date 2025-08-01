@@ -411,6 +411,75 @@ window.TaskManager = {
         }
     },
 
+    // Обновление задачи (редактирование)
+    async updateTask(taskId, taskData) {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка обновления задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка обновления задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Удаление задачи
+    async deleteTask(taskId) {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка удаления задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка удаления задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Получение одной задачи по ID
+    async getTaskById(taskId) {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                headers: {
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка получения задачи');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Ошибка получения задачи:', error);
+            return null;
+        }
+    },
+
     // Получение задач для пользователя
     getTasksForUser(userId) {
         return this.tasks.filter(task => 
@@ -425,7 +494,107 @@ window.TaskManager = {
         return this.tasks;
     },
 
-    // Обновление статуса задачи
+    // Принятие задачи в работу
+    async acceptTask(taskId, comment = '') {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}/accept`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify({ comment })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка принятия задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка принятия задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Завершение задачи
+    async completeTask(taskId, comment = '') {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify({ comment })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка завершения задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка завершения задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Отклонение задачи
+    async rejectTask(taskId, reason) {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify({ reason })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка отклонения задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка отклонения задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Отмена задачи
+    async cancelTask(taskId, reason = '') {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify({ reason })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка отмены задачи');
+            }
+
+            await this.loadTasks(); // Перезагружаем список
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка отмены задачи:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Обновление статуса задачи (устаревший метод - используйте специализированные методы выше)
     async updateTaskStatus(taskId, status, comment = '') {
         try {
             await window.WGarageAPI.updateTaskStatus(taskId, status, comment);
@@ -440,11 +609,45 @@ window.TaskManager = {
     // Добавление комментария
     async addComment(taskId, comment) {
         try {
-            await window.WGarageAPI.addTaskComment(taskId, comment);
+            const response = await fetch(`/api/tasks/${taskId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                },
+                body: JSON.stringify({ comment })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка добавления комментария');
+            }
+
             return { success: true };
         } catch (error) {
             console.error('Ошибка добавления комментария:', error);
             return { success: false, message: error.message };
+        }
+    },
+
+    // Получение комментариев
+    async getTaskComments(taskId) {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}/comments`, {
+                headers: {
+                    'Authorization': `Bearer ${window.UserManager.getToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка получения комментариев');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Ошибка получения комментариев:', error);
+            return [];
         }
     },
 

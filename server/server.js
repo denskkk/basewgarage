@@ -446,6 +446,403 @@ app.get('/api/tasks/:id/comments', authenticateToken, (req, res) => {
     });
 });
 
+// Полное обновление задачи (редактирование)
+app.put('/api/tasks/:id', authenticateToken, (req, res) => {
+    const { title, description, assignedTo, priority, deadline, status, comment } = req.body;
+    const taskId = req.params.id;
+    
+    if (!title || !assignedTo) {
+        return res.status(400).json({ error: 'Заголовок и исполнитель обязательны' });
+    }
+    
+    // Сначала получаем старые данные задачи
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, oldTask) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!oldTask) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права на редактирование
+        const canEdit = req.user.userId === oldTask.assignedBy || 
+                       req.user.userId === oldTask.assignedTo || 
+                       req.user.accessLevel === 0; // руководители
+        
+        if (!canEdit) {
+            return res.status(403).json({ error: 'Нет прав на редактирование этой задачи' });
+        }
+        
+        // Обновляем задачу
+        db.run(`UPDATE tasks SET 
+                title = ?, description = ?, assignedTo = ?, priority = ?, 
+                deadline = ?, status = ?, updated = CURRENT_TIMESTAMP 
+                WHERE id = ?`,
+            [title, description, assignedTo, priority, deadline, status, taskId], 
+            function(err) {
+                if (err) {
+                    console.error('Ошибка обновления задачи:', err);
+                    return res.status(500).json({ error: 'Ошибка обновления задачи' });
+                }
+                
+                // Добавляем комментарий об изменении
+                if (comment && comment.trim()) {
+                    db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                        [taskId, req.user.userId, comment, 'edit']);
+                }
+                
+                // Уведомляем участников об изменениях
+                const participants = [oldTask.assignedBy, oldTask.assignedTo, assignedTo].filter((id, index, arr) => 
+                    id && arr.indexOf(id) === index && id !== req.user.userId
+                );
+                
+                participants.forEach(userId => {
+                    createNotification(userId, 'Задача изменена', 
+                        `Задача "${title}" была отредактирована`, 'task', taskId);
+                    
+                    io.to(userId).emit('taskUpdate', {
+                        taskId,
+                        title,
+                        action: 'edited'
+                    });
+                });
+                
+                console.log(`✅ Задача "${title}" обновлена пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_edit', `Отредактирована задача: ${title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Удаление задачи
+app.delete('/api/tasks/:id', authenticateToken, (req, res) => {
+    const taskId = req.params.id;
+    
+    // Получаем информацию о задаче
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права на удаление (только создатель или руководители)
+        const canDelete = req.user.userId === task.assignedBy || req.user.accessLevel === 0;
+        
+        if (!canDelete) {
+            return res.status(403).json({ error: 'Нет прав на удаление этой задачи' });
+        }
+        
+        // Удаляем задачу и связанные данные
+        db.serialize(() => {
+            db.run('DELETE FROM task_comments WHERE taskId = ?', [taskId]);
+            db.run('DELETE FROM tasks WHERE id = ?', [taskId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Ошибка удаления задачи' });
+                }
+                
+                // Уведомляем исполнителя об удалении
+                if (task.assignedTo !== req.user.userId) {
+                    createNotification(task.assignedTo, 'Задача удалена', 
+                        `Задача "${task.title}" была удалена`, 'task', null);
+                    
+                    io.to(task.assignedTo).emit('taskDeleted', {
+                        taskId,
+                        title: task.title
+                    });
+                }
+                
+                console.log(`🗑️ Задача "${task.title}" удалена пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_delete', `Удалена задача: ${task.title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
+// Принятие задачи в работу
+app.post('/api/tasks/:id/accept', authenticateToken, (req, res) => {
+    const { comment } = req.body;
+    const taskId = req.params.id;
+    
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем, что пользователь может принять задачу
+        if (task.assignedTo !== req.user.userId) {
+            return res.status(403).json({ error: 'Вы не можете принять эту задачу' });
+        }
+        
+        if (task.status !== 'new') {
+            return res.status(400).json({ error: 'Задача уже принята или завершена' });
+        }
+        
+        // Обновляем статус
+        db.run('UPDATE tasks SET status = ?, acceptedAt = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP WHERE id = ?',
+            ['in_progress', taskId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Ошибка принятия задачи' });
+                }
+                
+                // Добавляем комментарий
+                if (comment && comment.trim()) {
+                    db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                        [taskId, req.user.userId, `Задача принята в работу. ${comment}`, 'accept']);
+                } else {
+                    db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                        [taskId, req.user.userId, 'Задача принята в работу', 'accept']);
+                }
+                
+                // Уведомляем постановщика
+                createNotification(task.assignedBy, 'Задача принята', 
+                    `Задача "${task.title}" принята в работу`, 'task', taskId);
+                
+                io.to(task.assignedBy).emit('taskUpdate', {
+                    taskId,
+                    status: 'in_progress',
+                    title: task.title,
+                    action: 'accepted'
+                });
+                
+                console.log(`✅ Задача "${task.title}" принята пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_accept', `Принята задача: ${task.title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Завершение задачи
+app.post('/api/tasks/:id/complete', authenticateToken, (req, res) => {
+    const { comment } = req.body;
+    const taskId = req.params.id;
+    
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права на завершение
+        const canComplete = task.assignedTo === req.user.userId || 
+                           task.assignedBy === req.user.userId || 
+                           req.user.accessLevel === 0;
+        
+        if (!canComplete) {
+            return res.status(403).json({ error: 'Нет прав на завершение этой задачи' });
+        }
+        
+        if (task.status === 'completed') {
+            return res.status(400).json({ error: 'Задача уже завершена' });
+        }
+        
+        // Обновляем статус
+        db.run('UPDATE tasks SET status = ?, completedAt = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP WHERE id = ?',
+            ['completed', taskId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Ошибка завершения задачи' });
+                }
+                
+                // Добавляем комментарий
+                if (comment && comment.trim()) {
+                    db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                        [taskId, req.user.userId, `Задача завершена. ${comment}`, 'complete']);
+                } else {
+                    db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                        [taskId, req.user.userId, 'Задача завершена', 'complete']);
+                }
+                
+                // Уведомляем участников
+                const participants = [task.assignedBy, task.assignedTo].filter(id => id !== req.user.userId);
+                participants.forEach(userId => {
+                    createNotification(userId, 'Задача завершена', 
+                        `Задача "${task.title}" завершена`, 'task', taskId);
+                    
+                    io.to(userId).emit('taskUpdate', {
+                        taskId,
+                        status: 'completed',
+                        title: task.title,
+                        action: 'completed'
+                    });
+                });
+                
+                console.log(`🎉 Задача "${task.title}" завершена пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_complete', `Завершена задача: ${task.title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Отклонение задачи
+app.post('/api/tasks/:id/reject', authenticateToken, (req, res) => {
+    const { reason } = req.body;
+    const taskId = req.params.id;
+    
+    if (!reason || !reason.trim()) {
+        return res.status(400).json({ error: 'Причина отклонения обязательна' });
+    }
+    
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права на отклонение
+        const canReject = task.assignedTo === req.user.userId || req.user.accessLevel === 0;
+        
+        if (!canReject) {
+            return res.status(403).json({ error: 'Нет прав на отклонение этой задачи' });
+        }
+        
+        if (task.status === 'completed' || task.status === 'cancelled') {
+            return res.status(400).json({ error: 'Задача уже завершена или отменена' });
+        }
+        
+        // Обновляем статус
+        db.run('UPDATE tasks SET status = ?, rejectedAt = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP WHERE id = ?',
+            ['rejected', taskId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Ошибка отклонения задачи' });
+                }
+                
+                // Добавляем комментарий с причиной
+                db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                    [taskId, req.user.userId, `Задача отклонена. Причина: ${reason}`, 'reject']);
+                
+                // Уведомляем постановщика
+                createNotification(task.assignedBy, 'Задача отклонена', 
+                    `Задача "${task.title}" отклонена. Причина: ${reason}`, 'task', taskId);
+                
+                io.to(task.assignedBy).emit('taskUpdate', {
+                    taskId,
+                    status: 'rejected',
+                    title: task.title,
+                    action: 'rejected',
+                    reason
+                });
+                
+                console.log(`❌ Задача "${task.title}" отклонена пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_reject', `Отклонена задача: ${task.title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Отмена задачи (только для создателя)
+app.post('/api/tasks/:id/cancel', authenticateToken, (req, res) => {
+    const { reason } = req.body;
+    const taskId = req.params.id;
+    
+    db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права на отмену (только создатель или руководители)
+        const canCancel = task.assignedBy === req.user.userId || req.user.accessLevel === 0;
+        
+        if (!canCancel) {
+            return res.status(403).json({ error: 'Нет прав на отмену этой задачи' });
+        }
+        
+        if (task.status === 'completed') {
+            return res.status(400).json({ error: 'Нельзя отменить завершенную задачу' });
+        }
+        
+        // Обновляем статус
+        db.run('UPDATE tasks SET status = ?, cancelledAt = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP WHERE id = ?',
+            ['cancelled', taskId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Ошибка отмены задачи' });
+                }
+                
+                // Добавляем комментарий
+                const cancelReason = reason && reason.trim() ? reason : 'Задача отменена';
+                db.run('INSERT INTO task_comments (taskId, userId, comment, type) VALUES (?, ?, ?, ?)',
+                    [taskId, req.user.userId, `Задача отменена. ${cancelReason}`, 'cancel']);
+                
+                // Уведомляем исполнителя
+                if (task.assignedTo !== req.user.userId) {
+                    createNotification(task.assignedTo, 'Задача отменена', 
+                        `Задача "${task.title}" отменена`, 'task', taskId);
+                    
+                    io.to(task.assignedTo).emit('taskUpdate', {
+                        taskId,
+                        status: 'cancelled',
+                        title: task.title,
+                        action: 'cancelled'
+                    });
+                }
+                
+                console.log(`🚫 Задача "${task.title}" отменена пользователем ${req.user.userId}`);
+                logActivity(req.user.userId, 'task_cancel', `Отменена задача: ${task.title}`, req.ip, req.get('User-Agent'));
+                
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Получение одной задачи по ID
+app.get('/api/tasks/:id', authenticateToken, (req, res) => {
+    const taskId = req.params.id;
+    
+    db.get(`SELECT t.*, 
+               ua.name as assignedToName, ua.position as assignedToPosition, ua.avatar as assignedToAvatar,
+               ub.name as assignedByName, ub.position as assignedByPosition, ub.avatar as assignedByAvatar
+            FROM tasks t
+            LEFT JOIN users ua ON t.assignedTo = ua.id
+            LEFT JOIN users ub ON t.assignedBy = ub.id
+            WHERE t.id = ?`, [taskId], (err, task) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка получения задачи' });
+        }
+        
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+        
+        // Проверяем права доступа к задаче
+        const hasAccess = task.assignedTo === req.user.userId || 
+                         task.assignedBy === req.user.userId || 
+                         req.user.accessLevel === 0;
+        
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Нет доступа к этой задаче' });
+        }
+        
+        res.json(task);
+    });
+});
+
 // API для уведомлений
 
 // Получение уведомлений

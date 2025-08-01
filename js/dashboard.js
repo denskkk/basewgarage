@@ -1467,6 +1467,13 @@ Dashboard.prototype.renderTaskCard = function(task) {
         actions += `<button class="btn btn-sm btn-danger btn-action ml-1" onclick="window.dashboard.cancelTask('${task.id}')">
             <i class="fas fa-ban"></i> Отменить
         </button>`;
+        
+        // Кнопка удаления только для создателя или руководителей высокого уровня
+        if (isCreatedByMe || currentUser.accessLevel === 0) {
+            actions += `<button class="btn btn-sm btn-danger btn-action ml-1" onclick="window.dashboard.deleteTask('${task.id}')" style="background: #dc2626;">
+                <i class="fas fa-trash"></i> Удалить
+            </button>`;
+        }
     }
     
     actions += `<button class="btn btn-sm btn-details ml-1" onclick="window.dashboard.showTaskDetails('${task.id}')">
@@ -1809,13 +1816,18 @@ Dashboard.prototype.showTaskDetails = function(taskId) {
 Dashboard.prototype.acceptTask = function(taskId) {
     window.NotificationManager.prompt(
         'Комментарий при принятии задачи (необязательно):',
-        (reason) => {
-            const result = window.TaskManager.acceptTask(taskId, reason);
-            if (result.success) {
-                window.NotificationManager.success('Задача принята в работу!');
-                this.refreshCurrentPage();
-            } else {
-                window.NotificationManager.error(`Ошибка: ${result.message}`);
+        async (comment) => {
+            try {
+                const result = await window.TaskManager.acceptTask(taskId, comment);
+                if (result.success) {
+                    window.NotificationManager.success('Задача принята в работу!');
+                    this.refreshCurrentPage();
+                } else {
+                    window.NotificationManager.error(`Ошибка: ${result.message}`);
+                }
+            } catch (error) {
+                window.NotificationManager.error('Ошибка при принятии задачи');
+                console.error(error);
             }
         },
         {
@@ -1831,13 +1843,18 @@ Dashboard.prototype.acceptTask = function(taskId) {
 Dashboard.prototype.completeTask = function(taskId) {
     window.NotificationManager.prompt(
         'Комментарий о выполнении (необязательно):',
-        (comment) => {
-            const result = window.TaskManager.completeTask(taskId, comment);
-            if (result.success) {
-                window.NotificationManager.success('Задача завершена!');
-                this.refreshCurrentPage();
-            } else {
-                window.NotificationManager.error(`Ошибка: ${result.message}`);
+        async (comment) => {
+            try {
+                const result = await window.TaskManager.completeTask(taskId, comment);
+                if (result.success) {
+                    window.NotificationManager.success('Задача завершена!');
+                    this.refreshCurrentPage();
+                } else {
+                    window.NotificationManager.error(`Ошибка: ${result.message}`);
+                }
+            } catch (error) {
+                window.NotificationManager.error('Ошибка при завершении задачи');
+                console.error(error);
             }
         },
         {
@@ -1853,18 +1870,23 @@ Dashboard.prototype.completeTask = function(taskId) {
 Dashboard.prototype.rejectTask = function(taskId) {
     window.NotificationManager.prompt(
         'Укажите причину отклонения задачи:',
-        (reason) => {
+        async (reason) => {
             if (!reason || reason.trim() === '') {
                 window.NotificationManager.error('Необходимо указать причину отклонения');
                 return;
             }
             
-            const result = window.TaskManager.rejectTask(taskId, reason);
-            if (result.success) {
-                window.NotificationManager.warning('Задача отклонена');
-                this.refreshCurrentPage();
-            } else {
-                window.NotificationManager.error(`Ошибка: ${result.message}`);
+            try {
+                const result = await window.TaskManager.rejectTask(taskId, reason);
+                if (result.success) {
+                    window.NotificationManager.warning('Задача отклонена');
+                    this.refreshCurrentPage();
+                } else {
+                    window.NotificationManager.error(`Ошибка: ${result.message}`);
+                }
+            } catch (error) {
+                window.NotificationManager.error('Ошибка при отклонении задачи');
+                console.error(error);
             }
         },
         {
@@ -1882,33 +1904,54 @@ Dashboard.prototype.cancelTask = function(taskId) {
         'Вы уверены, что хотите отменить эту задачу?',
         () => {
             window.NotificationManager.prompt(
-                'Причина отмены:',
-                (reason) => {
-                    if (!reason || reason.trim() === '') {
-                        window.NotificationManager.error('Необходимо указать причину отмены');
-                        return;
-                    }
-                    
-                    const result = window.TaskManager.updateTaskStatus(taskId, 'cancelled', reason);
-                    if (result.success) {
-                        window.NotificationManager.info('Задача отменена');
-                        this.refreshCurrentPage();
-                    } else {
-                        window.NotificationManager.error(`Ошибка: ${result.message}`);
+                'Причина отмены (необязательно):',
+                async (reason) => {
+                    try {
+                        const result = await window.TaskManager.cancelTask(taskId, reason);
+                        if (result.success) {
+                            window.NotificationManager.info('Задача отменена');
+                            this.refreshCurrentPage();
+                        } else {
+                            window.NotificationManager.error(`Ошибка: ${result.message}`);
+                        }
+                    } catch (error) {
+                        window.NotificationManager.error('Ошибка при отмене задачи');
+                        console.error(error);
                     }
                 },
                 {
                     placeholder: 'Причина отмены...',
-                    required: true,
+                    required: false,
                     submitText: 'Отменить задачу',
-                    cancelText: 'Назад'
+                    cancelText: 'Отмена'
                 }
             );
+        }
+    );
+};
+
+// Удаление задачи
+Dashboard.prototype.deleteTask = function(taskId) {
+    window.NotificationManager.confirm(
+        '⚠️ Вы уверены, что хотите УДАЛИТЬ эту задачу?\n\nЭто действие нельзя отменить!',
+        async () => {
+            try {
+                const result = await window.TaskManager.deleteTask(taskId);
+                if (result.success) {
+                    window.NotificationManager.success('Задача удалена');
+                    this.refreshCurrentPage();
+                } else {
+                    window.NotificationManager.error(`Ошибка: ${result.message}`);
+                }
+            } catch (error) {
+                window.NotificationManager.error('Ошибка при удалении задачи');
+                console.error(error);
+            }
         },
-        null,
+        () => {},
         {
-            confirmText: 'Да, отменить',
-            cancelText: 'Нет'
+            confirmText: 'Да, удалить',
+            cancelText: 'Отмена'
         }
     );
 };
@@ -1917,10 +1960,9 @@ Dashboard.prototype.cancelTask = function(taskId) {
 Dashboard.prototype.editTask = function(taskId) {
     const task = window.TaskManager.getTask(taskId);
     if (!task) {
-        alert('Задача не найдена');
+        window.NotificationManager.error('Задача не найдена');
         return;
     }
-    
     this.showEditTaskModal(task);
 };
 
@@ -2153,44 +2195,59 @@ Dashboard.prototype.addTaskComment = function(taskId) {
 };
 
 // Функции для действий из модального окна
-Dashboard.prototype.acceptTaskFromModal = function(taskId) {
-    const result = window.TaskManager.acceptTask(taskId);
-    if (result.success) {
-        document.querySelector('.modal').remove();
-        this.refreshCurrentPage();
-        window.NotificationManager.success('Задача принята в работу!');
-    } else {
-        window.NotificationManager.error(`Ошибка: ${result.message}`);
+Dashboard.prototype.acceptTaskFromModal = async function(taskId) {
+    try {
+        const result = await window.TaskManager.acceptTask(taskId);
+        if (result.success) {
+            document.querySelector('.modal').remove();
+            this.refreshCurrentPage();
+            window.NotificationManager.success('Задача принята в работу!');
+        } else {
+            window.NotificationManager.error(`Ошибка: ${result.message}`);
+        }
+    } catch (error) {
+        window.NotificationManager.error('Ошибка при принятии задачи');
+        console.error(error);
     }
 };
 
-Dashboard.prototype.completeTaskFromModal = function(taskId) {
-    const result = window.TaskManager.completeTask(taskId);
-    if (result.success) {
-        document.querySelector('.modal').remove();
-        this.refreshCurrentPage();
-        window.NotificationManager.success('Задача завершена!');
-    } else {
-        window.NotificationManager.error(`Ошибка: ${result.message}`);
+Dashboard.prototype.completeTaskFromModal = async function(taskId) {
+    try {
+        const result = await window.TaskManager.completeTask(taskId);
+        if (result.success) {
+            document.querySelector('.modal').remove();
+            this.refreshCurrentPage();
+            window.NotificationManager.success('Задача завершена!');
+        } else {
+            window.NotificationManager.error(`Ошибка: ${result.message}`);
+        }
+    } catch (error) {
+        window.NotificationManager.error('Ошибка при завершении задачи');
+        console.error(error);
     }
 };
 
 Dashboard.prototype.rejectTaskFromModal = function(taskId) {
     window.NotificationManager.prompt(
         'Укажите причину отклонения:',
-        (reason) => {
+        async (reason) => {
             if (!reason || reason.trim() === '') {
                 window.NotificationManager.error('Необходимо указать причину отклонения');
                 return;
             }
             
-            const result = window.TaskManager.rejectTask(taskId, reason);
-            if (result.success) {
-                document.querySelector('.modal').remove();
-                this.refreshCurrentPage();
-                window.NotificationManager.warning('Задача отклонена');
-            } else {
-                window.NotificationManager.error(`Ошибка: ${result.message}`);
+            try {
+                const result = await window.TaskManager.rejectTask(taskId, reason);
+                if (result.success) {
+                    document.querySelector('.modal').remove();
+                    this.refreshCurrentPage();
+                    window.NotificationManager.warning('Задача отклонена');
+                } else {
+                    window.NotificationManager.error(`Ошибка: ${result.message}`);
+                }
+            } catch (error) {
+                window.NotificationManager.error('Ошибка при отклонении задачи');
+                console.error(error);
             }
         },
         {
@@ -2326,7 +2383,7 @@ Dashboard.prototype.showEditTaskModal = function(task) {
     });
 };
 
-Dashboard.prototype.updateTask = function(taskId) {
+Dashboard.prototype.updateTask = async function(taskId) {
     const title = document.getElementById('editTaskTitle').value.trim();
     const description = document.getElementById('editTaskDescription').value.trim();
     const assignedTo = document.getElementById('editTaskAssignee').value;
@@ -2336,65 +2393,34 @@ Dashboard.prototype.updateTask = function(taskId) {
     const comment = document.getElementById('editComment').value.trim();
     
     if (!title || !assignedTo) {
-        alert('Пожалуйста, заполните обязательные поля');
+        window.NotificationManager.error('Пожалуйста, заполните обязательные поля');
         return;
     }
     
-    const taskIndex = window.TaskManager.tasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) {
-        alert('Задача не найдена');
-        return;
+    try {
+        const taskData = {
+            title,
+            description,
+            assignedTo,
+            priority,
+            deadline: deadline || null,
+            status,
+            comment
+        };
+        
+        const result = await window.TaskManager.updateTask(taskId, taskData);
+        
+        if (result.success) {
+            window.NotificationManager.success('Задача успешно обновлена!');
+            document.querySelector('.modal').remove();
+            this.refreshCurrentPage();
+        } else {
+            window.NotificationManager.error(`Ошибка: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Ошибка при обновлении задачи:', error);
+        window.NotificationManager.error('Произошла ошибка при обновлении задачи');
     }
-    
-    const oldTask = { ...window.TaskManager.tasks[taskIndex] };
-    const currentUser = window.UserManager.getCurrentUser();
-    
-    // Обновляем задачу
-    window.TaskManager.tasks[taskIndex] = {
-        ...window.TaskManager.tasks[taskIndex],
-        title,
-        description,
-        assignedTo,
-        priority,
-        deadline: deadline || null,
-        status,
-        updated: new Date().toISOString()
-    };
-    
-    // Добавляем комментарий об изменениях
-    let changeComment = 'Задача отредактирована.';
-    const changes = [];
-    
-    if (oldTask.title !== title) changes.push(`название изменено с "${oldTask.title}" на "${title}"`);
-    if (oldTask.assignedTo !== assignedTo) {
-        const oldUser = window.usersDatabase[oldTask.assignedTo];
-        const newUser = window.usersDatabase[assignedTo];
-        changes.push(`исполнитель изменен с "${oldUser?.name}" на "${newUser?.name}"`);
-    }
-    if (oldTask.priority !== priority) changes.push(`приоритет изменен с "${oldTask.priority}" на "${priority}"`);
-    if (oldTask.status !== status) changes.push(`статус изменен с "${oldTask.status}" на "${status}"`);
-    
-    if (changes.length > 0) {
-        changeComment += ' ' + changes.join(', ') + '.';
-    }
-    
-    if (comment) {
-        changeComment += ` Комментарий: ${comment}`;
-    }
-    
-    window.TaskManager.tasks[taskIndex].comments.push({
-        text: changeComment,
-        author: currentUser.id,
-        timestamp: new Date().toISOString(),
-        type: 'edit'
-    });
-    
-    window.TaskManager.saveTasks();
-    
-    // Закрываем модальное окно и обновляем страницу
-    document.getElementById('editTaskModal').remove();
-    this.refreshCurrentPage();
-    alert('Задача успешно обновлена!');
 };
 
 Dashboard.prototype.getDocumentTypeText = function(type) {
