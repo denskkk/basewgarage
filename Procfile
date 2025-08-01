@@ -1,2 +1,2 @@
-release: cd server && npm install && npm run init-db
-web: cd server && npm start
+release: npm install && node init-db.js
+web: npm start

@@ -4,15 +4,29 @@
   "description": "W Garage - многопользовательская система управления автосервисом",
   "main": "server/server.js",
   "scripts": {
-    "start": "cd server && npm start",
-    "build": "cd server && npm install && npm run init-db",
-    "dev": "cd server && npm run dev",
-    "init-db": "cd server && npm run init-db",
-    "install-server": "cd server && npm install"
+    "start": "node start.js",
+    "build": "node init-db.js",
+    "dev": "nodemon start.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.6",
+    "socket.io": "^4.7.5",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.8",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/wgarage.git"
+    "url": "git+https://github.com/denskkk/basewgarage.git"
   },
   "keywords": [
     "garage",
@@ -20,7 +34,9 @@
     "nodejs",
     "express",
     "sqlite",
-    "websocket"
+    "websocket",
+    "task-management",
+    "realtime"
   ],
   "author": "W Garage Team",
   "license": "MIT",

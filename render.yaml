@@ -3,8 +3,8 @@ services:
     name: wgarage-app
     env: node
     plan: free
-    buildCommand: cd server && npm install && npm run init-db
-    startCommand: cd server && npm start
+    buildCommand: npm install && node init-db.js
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,3 +12,5 @@ services:
         generateValue: true
       - key: CLIENT_URL
         sync: false
+      - key: PORT
+        value: 10000
